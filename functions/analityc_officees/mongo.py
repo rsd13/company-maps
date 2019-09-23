@@ -1,10 +1,7 @@
 
-
-
 from pymongo import MongoClient
-
-import  pandas as pd
-from points import init_geo
+import pandas as pd
+from analityc import init_geo
 
 def connect():
     """funcion que conecta a la base de datos"""
@@ -16,9 +13,11 @@ def connect():
 
 def getCollection(db):
     """funcion que devuelve resultados tras una query"""
-    return db.location.find()
+    return db.location.find(
+        {},{"_id":0}
+    )
 
-def geonear(geopoint, maxdistance,db):
+def geonear(geopoint, maxdistance, db):
     """funcion quee aplica el filtro near de monbofb"""
     return db.location.find({
         "geo":{
@@ -29,14 +28,16 @@ def geonear(geopoint, maxdistance,db):
         }
     })
 
+
 def getOffice():
+
+
     db = connect()
     companies = getCollection(db)
     data = pd.DataFrame(companies)
-    aux = data.iloc[50,]
+    data["point"] = data.geo.apply(init_geo, args=(db,))
 
-    a = geonear(aux.geo,2000000,db)
-
-    data["punt"] = data.geo.apply(init_geo , args=(db,))
+    return data
 
 
+#lo pongo debajo por problemas de dependencias circulares

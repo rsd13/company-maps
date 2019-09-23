@@ -1,5 +1,3 @@
+from mongodb import get_json
 
-from mongodb import main
-from foreignExchange import transform_money
-
-main()
+get_json()
