@@ -1,3 +1,5 @@
+import pandas as pd
+from pandas.io.json import json_normalize
 
 
 cats = ["mobile", "web", "software", "ecommerce", "analytics", "games_video", "web", "network_hosting", "games_video"]
@@ -63,18 +65,67 @@ def count(num):
 
     return result
 
+def average(col):
+    avg = 0
+    for k,v in col.items():
+        avg += v
 
-def getDataframe():
+    return avg/len(col)
+
+def getCoord():
 
     data = getOffice()
+    filters = ["starbucks", "nursery", "club", "vegan"]
 
-    """data["point"] = data[["point", "latitude", "longitude"]].apply(count_locals, args=("starbucks",), axis=1)
-    data["point"] = data[["point", "latitude", "longitude"]].apply(count_locals, args=("nursery",), axis=1)
-    data["point"] = data[["point", "latitude", "longitude"]].apply(count_locals, args=("club",), axis=1)
-    data["point"] = data[["point", "latitude", "longitude"]].apply(count_locals, args=("vegan",), axis=1)
 
-    data.to_json("path.json",orient="records")"""
+    for filter in filters:
+        data["point"] = data[["point", "latitude", "longitude"]].apply(count_locals, args=(filter,), axis=1)
+        
+
+    data.to_json("path.json",orient="records")
+
+    data = pd.read_json("path.json")
+    data["point"] = data.point.apply(average)
+    result = data.sort_values(['point'], ascending=[0])
+    result = result.drop_duplicates(subset='city', keep="first")
+
+    #obtengo el mejor
+    max_df = result.iloc[:1].copy()
+
+    max_df["filters"] = max_df[["latitude", "longitude"]].apply(getLocals, args=(filters,), axis=1)
+
+    #data = json_normalize(json.loads(df_json), 'offices', ['name', 'total_money_raised', 'category_code'])
+    a = max_df.explode("filters")
+    a = json_normalize(a["filters"])
+
+
+    result = max_df.append(a, ignore_index=True)
+
+    # por último obtengo las oficinas cercanas
+    db = connect()
+    max_point = result.loc[0,].copy()
+    offices = geonear(max_point.geo, 2000, db)
+
+    lst = []
+    for office in offices:
+        lst.append(office)
+
+    a = json_normalize(lst)
+    a = a[["name","city","money","category_code","longitude","latitude"]]
+
+    result = result.append(a, ignore_index=True)
+
+    #limpio las columnas
+    result = result[["name", "city", "money", "category_code", "longitude", "latitude","point"]]
+
+    result.update(result[["point"]].fillna(0))
+    result.update(result[["city"]].fillna(max_point.city))
+    result.to_json("result.json", orient="records")
+    return result
+
+
+
 
 #lo pongo aqui por problemas de depedencias ciruclares
-from mongo import getOffice, geonear
-from foursquare import count_locals
+from mongo import getOffice, geonear,connect
+from foursquare import count_locals,getLocals

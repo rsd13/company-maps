@@ -1,8 +1,8 @@
-from analityc import getDataframe
-
+from analityc import getCoord
 
 def main():
-    getDataframe()
+    coord = getCoord()
+
 
 if __name__=='__main__':
     main()
